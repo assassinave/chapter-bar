@@ -10,6 +10,11 @@ hover labels, click-to-seek, and playhead-driven progress fill.
   fallback when you don't provide one.
 - **Themeable** with CSS custom properties — no JS required.
 
+![Chapter bar under an HTML5 video: a segmented timeline with a hover label showing the chapter name and start time.](https://raw.githubusercontent.com/assassinave/chapter-bar/main/chapter-bar.jpg)
+
+*Segmented timeline under the native video controls. Watched and skipped
+chapters fill in; hovering a segment reveals its name and start time.*
+
 ---
 
 ## Quick start
