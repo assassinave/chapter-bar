@@ -1,0 +1,35 @@
+{
+  "name": "chapter-bar",
+  "version": "1.0.0",
+  "description": "Zero-config, drop-in chapter progress bar for any <video>. One script tag, no dependencies, no build step.",
+  "main": "chapter-bar.js",
+  "module": "chapter-bar.js",
+  "unpkg": "chapter-bar.js",
+  "jsdelivr": "chapter-bar.js",
+  "type": "commonjs",
+  "files": [
+    "chapter-bar.js",
+    "chapters.vtt",
+    "README.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": "./chapter-bar.js",
+    "./chapters.vtt": "./chapters.vtt"
+  },
+  "scripts": {
+    "start": "python3 -m http.server 8123"
+  },
+  "keywords": [
+    "video",
+    "chapters",
+    "progress-bar",
+    "timeline",
+    "webvtt",
+    "player",
+    "html5-video",
+    "no-dependencies"
+  ],
+  "license": "MIT",
+  "sideEffects": true
+}

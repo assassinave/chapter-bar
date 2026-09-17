@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Chapter Progress Bar</title>
+<style>
+  :root {
+    /* Base neutral color for the chapter track */
+    --chapter-neutral: #d4d7dd;
+    --chapter-neutral-hover: #c4c8d0;
+    /* Watched / skipped fill color */
+    --chapter-blue: #2f6bff;
+    --chapter-blue-soft: #6f97ff;
+
+    --track-base-h: 3px;   /* base line height */
+    --track-hover-h: 6px;  /* hover line height */
+    --seg-gap: 4px;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: #f4f5f7;
+    color: #1a1d23;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 28px;
+    padding: 40px 16px;
+  }
+
+  /* Everything is horizontally centered */
+  .stage {
+    width: 100%;
+    max-width: 960px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .video-wrap {
+    width: 100%;
+    border-radius: 14px;
+    overflow: hidden;
+    background: #000;
+    box-shadow: 0 12px 40px rgba(20, 25, 40, 0.14);
+    aspect-ratio: 3024 / 1524;
+  }
+  video {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #000;
+  }
+
+  /* Timeline is centered and constrained */
+  .timeline {
+    position: relative;      /* anchor for the overlaid tooltip */
+    width: 100%;
+    max-width: 900px;
+    margin: 22px auto 0;
+    padding: 10px 0;         /* generous hit area, doesn't move the line */
+    cursor: pointer;
+  }
+
+  .track {
+    display: flex;
+    align-items: center;
+    gap: var(--seg-gap);
+    height: var(--track-hover-h);   /* reserve hover height so layout never shifts */
+    width: 100%;
+  }
+
+  .seg {
+    position: relative;
+    height: var(--track-base-h);
+    border-radius: 999px;
+    background: var(--chapter-neutral);
+    overflow: hidden;
+    transition: height 120ms ease, background-color 120ms ease;
+    /* flex-grow set inline per-chapter to reflect its duration */
+  }
+
+  /* Only the segment under the cursor grows; base color stays.
+     The hovered chapter is resolved in JS so the whole (padded)
+     timeline stays an easy hit target without expanding neighbors. */
+  .seg.hovered {
+    height: var(--track-hover-h);
+    background: var(--chapter-neutral-hover);
+  }
+
+  /* Watched / skipped fill */
+  .seg .fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 0%;
+    background: var(--chapter-blue);
+    border-radius: 999px;
+    transition: width 90ms linear;
+  }
+  /* Leading edge of the currently-playing chapter reads a touch softer */
+  .seg.active .fill {
+    background: linear-gradient(90deg, var(--chapter-blue) 0%, var(--chapter-blue) 82%, var(--chapter-blue-soft) 100%);
+  }
+
+  /* Dynamic, overlaid tooltip — absolutely positioned so it never
+     changes the size/flow of the track or its segments */
+  .tooltip {
+    position: absolute;
+    bottom: calc(100% - 2px);
+    left: 0;
+    transform: translateX(-50%);
+    padding: 5px 10px;
+    background: #1a1d23;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    border-radius: 6px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 100ms ease;
+    z-index: 5;
+  }
+  .tooltip::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 4px solid transparent;
+    border-top-color: #1a1d23;
+  }
+  .tooltip.show { opacity: 1; }
+  .tooltip .time { color: #9aa2b1; font-weight: 500; margin-left: 6px; }
+
+  /* Bottom placement: flip the label under the bar and point the arrow up. */
+  .tooltip.place-bottom {
+    bottom: auto;
+    top: calc(100% - 2px);
+  }
+  .tooltip.place-bottom::after {
+    top: auto;
+    bottom: 100%;
+    border-top-color: transparent;
+    border-bottom-color: #1a1d23;
+  }
+
+  /* --- Configuration UI --- */
+  .config {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: #fff;
+    border: 1px solid #e3e5ea;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(20, 25, 40, 0.05);
+    font-size: 13px;
+  }
+  .config .label { font-weight: 600; color: #1a1d23; }
+  .segmented {
+    display: inline-flex;
+    background: #f0f1f4;
+    border-radius: 8px;
+    padding: 2px;
+  }
+  .segmented button {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    padding: 5px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #6b7280;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 120ms ease, color 120ms ease;
+  }
+  .segmented button[aria-pressed="true"] {
+    background: #fff;
+    color: #1a1d23;
+    box-shadow: 0 1px 3px rgba(20, 25, 40, 0.12);
+  }
+
+  .meta {
+    font-size: 13px;
+    color: #6b7280;
+    text-align: center;
+  }
+  .meta b { color: #1a1d23; }
+</style>
+</head>
+<body>
+  <div class="config" role="group" aria-label="Chapter label configuration">
+    <span class="label">Chapter label position</span>
+    <div class="segmented" id="posControl">
+      <button type="button" data-pos="top" aria-pressed="true">Top</button>
+      <button type="button" data-pos="bottom" aria-pressed="false">Bottom</button>
+    </div>
+  </div>
+
+  <div class="stage">
+    <div class="video-wrap">
+      <video id="video" src="keynote.mov" playsinline controls preload="metadata"></video>
+    </div>
+
+    <div class="timeline" id="timeline">
+      <div class="track" id="track"></div>
+      <div class="tooltip" id="tooltip"></div>
+    </div>
+
+    <p class="meta">Chapter metadata generated every <b>8s</b> · hover the bar for chapter names · watched &amp; skipped chapters fill <b style="color:#2f6bff">blue</b></p>
+  </div>
+
+<script>
+(function () {
+  const CHAPTER_LENGTH = 8; // seconds
+  const video = document.getElementById('video');
+  const track = document.getElementById('track');
+  const timeline = document.getElementById('timeline');
+  const tooltip = document.getElementById('tooltip');
+
+  let chapters = [];
+
+  // Build chapter metadata every 8 seconds from the video duration.
+  function buildChapters(duration) {
+    chapters = [];
+    const count = Math.max(1, Math.ceil(duration / CHAPTER_LENGTH));
+    for (let i = 0; i < count; i++) {
+      const start = i * CHAPTER_LENGTH;
+      const end = Math.min((i + 1) * CHAPTER_LENGTH, duration);
+      chapters.push({
+        index: i,
+        name: 'Chapter ' + (i + 1),
+        start,
+        end,
+        el: null,
+        fill: null,
+      });
+    }
+    renderSegments();
+  }
+
+  function renderSegments() {
+    track.innerHTML = '';
+    chapters.forEach((ch) => {
+      const seg = document.createElement('div');
+      seg.className = 'seg';
+      // width proportional to the chapter's real duration
+      seg.style.flexGrow = (ch.end - ch.start).toFixed(3);
+      seg.style.flexBasis = '0';
+
+      const fill = document.createElement('div');
+      fill.className = 'fill';
+      seg.appendChild(fill);
+
+      ch.el = seg;
+      ch.fill = fill;
+      track.appendChild(seg);
+    });
+  }
+
+  function chapterAt(t) {
+    return chapters.find((ch) => t >= ch.start && t < ch.end) || chapters[chapters.length - 1];
+  }
+
+  // Update fills based purely on the current playhead position.
+  // Blue only appears where the playhead is at or ahead of the section:
+  //   - fully behind the playhead -> full blue
+  //   - the live chapter          -> progressive blue
+  //   - ahead of the playhead     -> neutral
+  // No latching, so scrubbing back removes blue from sections you moved off.
+  function updateProgress() {
+    const t = video.currentTime;
+    const active = chapterAt(t);
+    chapters.forEach((ch) => {
+      const frac = (t - ch.start) / (ch.end - ch.start); // >=1 behind, 0..1 live, <0 ahead
+      ch.fill.style.width = Math.max(0, Math.min(1, frac)) * 100 + '%';
+      ch.el.classList.toggle('active', ch === active && t > ch.start && t < ch.end);
+    });
+  }
+
+  function fmt(t) {
+    const m = Math.floor(t / 60);
+    const s = Math.floor(t % 60);
+    return m + ':' + String(s).padStart(2, '0');
+  }
+
+  // --- Seeking + hover on the timeline ---
+  function timeAtClientX(clientX) {
+    const rect = track.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    return ratio * (video.duration || 0);
+  }
+
+  timeline.addEventListener('mousemove', (e) => {
+    if (!chapters.length) return;
+    const hoverTime = timeAtClientX(e.clientX);  // exact second under the cursor
+    const ch = chapterAt(hoverTime);
+
+    // Dynamic + overlaid tooltip: only its position/text change,
+    // the track geometry is untouched.
+    const rect = timeline.getBoundingClientRect();
+    let x = e.clientX - rect.left;
+    x = Math.max(40, Math.min(rect.width - 40, x)); // keep on-screen
+    tooltip.style.left = x + 'px';
+    tooltip.innerHTML = ch.name + '<span class="time">' + fmt(hoverTime) + '</span>';
+    tooltip.classList.add('show');
+
+    // Grow only the hovered chapter's segment.
+    chapters.forEach((c) => c.el.classList.toggle('hovered', c === ch));
+  });
+
+  timeline.addEventListener('mouseleave', () => {
+    tooltip.classList.remove('show');
+    chapters.forEach((c) => c.el.classList.remove('hovered'));
+  });
+
+  timeline.addEventListener('click', (e) => {
+    if (!video.duration) return;
+    video.currentTime = timeAtClientX(e.clientX);
+    updateProgress();
+  });
+
+  // --- Wiring ---
+  video.addEventListener('loadedmetadata', () => buildChapters(video.duration));
+  video.addEventListener('timeupdate', updateProgress);
+  video.addEventListener('seeking', updateProgress);
+  video.addEventListener('seeked', updateProgress);
+
+  // --- Config: chapter label position (top / bottom) ---
+  const posControl = document.getElementById('posControl');
+  function setLabelPosition(pos) {
+    tooltip.classList.toggle('place-bottom', pos === 'bottom');
+    posControl.querySelectorAll('button').forEach((b) => {
+      b.setAttribute('aria-pressed', String(b.dataset.pos === pos));
+    });
+  }
+  posControl.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-pos]');
+    if (btn) setLabelPosition(btn.dataset.pos);
+  });
+
+  // If metadata is already available (cached), build immediately.
+  if (video.readyState >= 1 && video.duration) buildChapters(video.duration);
+})();
+</script>
+</body>
+</html>

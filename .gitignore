@@ -1,0 +1,8 @@
+# Demo video asset — supply your own; don't commit large media
+keynote.mov
+*.mov
+*.mp4
+
+# Dependencies / build noise
+node_modules/
+.DS_Store
