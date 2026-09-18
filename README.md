@@ -37,6 +37,57 @@ Prefer a CDN? Once published to npm, it's served automatically:
 
 ---
 
+## Add it with a coding agent
+
+Paste this into Claude Code (or any coding agent) from inside your project and
+it will wire chapter-bar into your own pages:
+
+```text
+Add the chapter-bar library to this project so every <video> gets a segmented
+chapter progress bar under it.
+
+What it is: a single dependency-free browser script. It auto-attaches to every
+<video> on the page on DOMContentLoaded and watches the DOM with a
+MutationObserver, so videos added later are picked up too. There is no build
+step, no import, and no init call — loading the script is the whole integration.
+
+Do this:
+1. Find the pages or templates in this project that render a <video> element.
+2. Load the script once per page, via the CDN:
+   <script src="https://cdn.jsdelivr.net/npm/chapter-bar/chapter-bar.js"></script>
+   Put it wherever this project normally puts third-party scripts (the shared
+   layout/template is usually right). If the project vendors its assets locally
+   instead, download chapter-bar.js into the static assets directory and
+   reference that path.
+3. Do NOT wrap it in a component, hook, module import, or bundler entry unless
+   this project has no way to emit a plain script tag. It is a side-effecting
+   global script.
+4. If any video already has chapter data available, add a WebVTT chapters
+   track to it:
+     <track kind="chapters" src="chapters.vtt" default>
+   The .vtt must be same-origin, or the video needs crossorigin="anonymous"
+   and the file needs CORS headers. With no track, the bar falls back to even
+   8-second segments — that is fine, do not invent chapter data.
+5. Optional, only where it fits this project's design:
+   - per video: data-cb-interval="10" (fallback segment seconds),
+     data-cb-label-position="top|bottom", data-cb-ignore (skip this video)
+   - page-wide defaults on the script tag: data-interval, data-label-position
+   - theming via CSS custom properties on .cb-timeline: --cb-blue (progress
+     fill), --cb-neutral (track), --cb-base-h, --cb-hover-h. Match the existing
+     palette rather than leaving the default blue if this project has brand
+     colors.
+6. If videos here are rendered into a shadow root or injected by custom JS that
+   the observer can't see, call ChapterBar.attach(videoEl) or
+   ChapterBar.attachAll(rootEl) after that render. Attachment is idempotent.
+
+Then tell me which files you changed and how to view a page with a video on it.
+```
+
+Until the package is published to npm, swap the CDN line in the prompt for a
+copy of [`chapter-bar.js`](chapter-bar.js) served from your own project.
+
+---
+
 ## Adding real chapters
 
 To get named chapters with meaningful boundaries, give the video a **WebVTT
